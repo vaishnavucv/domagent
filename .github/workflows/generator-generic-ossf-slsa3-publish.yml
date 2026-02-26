@@ -1,0 +1,129 @@
+# This workflow uses actions not certified by GitHub.
+# They are provided by slsa-framework and are governed by
+# separate terms of service, privacy policy, and support documentation.
+#
+# SLSA (Supply-chain Levels for Software Artifacts) Level 3 provenance.
+# Specification: https://slsa.dev/spec/v0.1/requirements
+# Generator:     https://github.com/slsa-framework/slsa-github-generator
+# Verifier:      https://github.com/slsa-framework/slsa-verifier
+#
+# What this workflow does for DOMAgent:
+#   1. Packages the Chrome extension as a ZIP archive
+#   2. Packages the Firefox extension as an XPI archive
+#   3. Packages the MCP server using "npm pack"
+#   4. Computes SHA-256 digests of all three artifacts
+#   5. Calls the SLSA generic generator to produce a signed provenance
+#      document (using GitHub's OIDC token - non-falsifiable)
+#   6. Uploads artifacts + provenance to the GitHub release
+#
+# Trigger: automatically on every new GitHub release (created event),
+#          or manually via workflow_dispatch for testing.
+
+name: SLSA generic generator
+
+on:
+  workflow_dispatch:
+  release:
+    types: [created]
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────
+  # Job 1: Build all publishable artifacts and compute their digests
+  # ──────────────────────────────────────────────────────────────────
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      digests: ${{ steps.hash.outputs.digests }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # ── Derive the release version from the git tag ──────────────
+      - name: Set version from tag
+        id: version
+        run: |
+          # Strip the leading 'v' from the tag name (e.g. v0.1.0 → 0.1.0)
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "Building version: ${VERSION}"
+
+      # ── Artifact 1: Chrome extension ZIP ─────────────────────────
+      - name: Package Chrome extension
+        run: |
+          cd domagent-extension
+          zip -r "../domagent-chrome-${{ steps.version.outputs.version }}.zip" chrome/ \
+            --exclude "chrome/.DS_Store" \
+            --exclude "chrome/__MACOSX"
+          echo "Chrome extension packaged:"
+          ls -lh "../domagent-chrome-${{ steps.version.outputs.version }}.zip"
+
+      # ── Artifact 2: Firefox extension XPI ────────────────────────
+      - name: Package Firefox extension
+        run: |
+          cd domagent-extension
+          zip -r "../domagent-firefox-${{ steps.version.outputs.version }}.xpi" firefox/ \
+            --exclude "firefox/.DS_Store" \
+            --exclude "firefox/__MACOSX"
+          echo "Firefox extension packaged:"
+          ls -lh "../domagent-firefox-${{ steps.version.outputs.version }}.xpi"
+
+      # ── Artifact 3: MCP server tarball via npm pack ───────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Package MCP server
+        run: |
+          cd domagent-mcp
+          npm ci --ignore-scripts
+          # npm pack creates domagent-bridge-<version>.tgz
+          npm pack
+          # Move the tarball to the repo root for consistent hashing
+          mv domagent-bridge-*.tgz "../domagent-mcp-${{ steps.version.outputs.version }}.tgz"
+          echo "MCP server tarball packaged:"
+          ls -lh "../domagent-mcp-${{ steps.version.outputs.version }}.tgz"
+
+      # ── Step: Generate SHA-256 digests for all three artifacts ────
+      # The SLSA generator requires base64-encoded "file sha256sum" lines.
+      - name: Generate subject for provenance
+        id: hash
+        run: |
+          set -euo pipefail
+
+          # Glob all release artifacts in the repo root
+          files=$(ls \
+            "domagent-chrome-${{ steps.version.outputs.version }}.zip" \
+            "domagent-firefox-${{ steps.version.outputs.version }}.xpi" \
+            "domagent-mcp-${{ steps.version.outputs.version }}.tgz" \
+          )
+
+          echo "Artifacts being hashed:"
+          ls -lh $files
+
+          # Produce base64-encoded sha256 lines (required format for SLSA generator)
+          echo "hashes=$(sha256sum $files | base64 -w0)" >> "${GITHUB_OUTPUT}"
+
+      # ── Upload artifacts to the GitHub release ────────────────────
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            domagent-chrome-${{ steps.version.outputs.version }}.zip
+            domagent-firefox-${{ steps.version.outputs.version }}.xpi
+            domagent-mcp-${{ steps.version.outputs.version }}.tgz
+
+  # ──────────────────────────────────────────────────────────────────
+  # Job 2: Generate and sign SLSA Level 3 provenance
+  # ──────────────────────────────────────────────────────────────────
+  provenance:
+    needs: [build]
+    permissions:
+      actions: read    # Read the workflow path for provenance
+      id-token: write  # Sign provenance with GitHub OIDC token
+      contents: write  # Upload the provenance file to the release
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.4.0
+    with:
+      base64-subjects: "${{ needs.build.outputs.digests }}"
+      upload-assets: true  # Attach provenance JSON to the GitHub release
