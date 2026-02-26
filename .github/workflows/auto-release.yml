@@ -5,11 +5,13 @@
 #   2. Bumps the patch number  (e.g. 1.0.0 -> 1.0.1)
 #   3. Commits the version bump back to main with "[skip ci]"
 #      so this workflow does NOT re-trigger on its own commit
-#   4. Creates a git tag  (e.g. v1.0.1)
-#   5. Creates a GitHub Release with auto-generated release notes
-#   6. The "release: created" event fires the SLSA provenance workflow
-#      (.github/workflows/generator-generic-ossf-slsa3-publish.yml)
-#      which builds and attaches all three artifacts + provenance
+#   4. Packages all three release artifacts directly:
+#        - domagent-chrome-<version>.zip   (Chrome extension)
+#        - domagent-firefox-<version>.xpi  (Firefox extension)
+#        - domagent-mcp-<version>.tgz      (MCP server npm pack)
+#   5. Creates a git tag  (e.g. v1.0.1)
+#   6. Creates a GitHub Release and uploads all three artifacts
+#   7. Outputs SHA-256 digests so the SLSA provenance job can sign them
 #
 # Skip condition:
 #   Commits whose message contains "[skip ci]" are ignored.
@@ -29,26 +31,26 @@
 #                                    │
 #                                    │  push event fires
 #                                    ▼
-#                         auto-release.yml
-#                         ─────────────────────────────────
+#                         auto-release.yml  (this file)
+#                         ──────────────────────────────────────
 #                         1. Read version from package.json
 #                         2. npm version patch  (1.0.0 → 1.0.1)
 #                         3. git commit "[skip ci]" ← loop broken
 #                         4. git push origin main
-#                         5. git tag v1.0.1
-#                         6. Create GitHub Release
+#                         5. Pack Chrome ZIP
+#                         6. Pack Firefox XPI
+#                         7. npm pack MCP server tgz
+#                         8. git tag v1.0.1
+#                         9. Create GitHub Release + upload all artifacts
 #                                    │
-#                                    │  "release: created" event fires
+#                                    │  digests passed to provenance job
 #                                    ▼
 #               generator-generic-ossf-slsa3-publish.yml
 #               ─────────────────────────────────────────
-#               1. Pack Chrome ZIP
-#               2. Pack Firefox XPI
-#               3. npm pack MCP server tgz
-#               4. SHA-256 hash all three
-#               5. SLSA generator signs provenance
+#               1. SHA-256 hash all three artifacts
+#               2. SLSA generator signs provenance
 #                  (GitHub OIDC token – non-falsifiable)
-#               6. Upload artifacts + provenance to release
+#               3. Upload provenance file to the release
 #
 # ─────────────────────────────────────────────────────────────────────
 
@@ -60,8 +62,11 @@ on:
       - main
 
 jobs:
-  auto-release:
-    name: Bump version and create release
+  # ──────────────────────────────────────────────────────────────────
+  # Job 1: Bump version, build artifacts, create release
+  # ──────────────────────────────────────────────────────────────────
+  build-and-release:
+    name: Build artifacts and create release
     runs-on: ubuntu-latest
 
     # Do not run on version-bump commits made by this workflow itself
@@ -70,58 +75,94 @@ jobs:
     permissions:
       contents: write  # push version bump commit + tag + create release
 
+    outputs:
+      version: ${{ steps.version.outputs.new }}
+      digests: ${{ steps.hash.outputs.digests }}
+
     steps:
-      # ── 1. Checkout with full history and write access ────────────
+      # ── 1. Checkout ───────────────────────────────────────────────
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Use GITHUB_TOKEN so the push in step 3 can trigger
-          # other workflows (tags/releases) correctly
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── 2. Set up Node.js for npm version ─────────────────────────
+      # ── 2. Node.js ────────────────────────────────────────────────
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       # ── 3. Bump patch version in package.json ─────────────────────
-      #   npm version patch --no-git-tag-version
-      #   - increments the patch digit only (1.0.0 → 1.0.1)
-      #   - writes the new version to package.json
-      #   - does NOT create a git tag (we handle that ourselves)
+      #   --no-git-tag-version: only writes to package.json, no git ops
       - name: Bump patch version
         id: version
         run: |
           cd domagent-mcp
 
           OLD=$(node -p "require('./package.json').version")
-
-          # npm version patch returns the new version with a leading "v"
           RAW=$(npm version patch --no-git-tag-version)
           NEW="${RAW#v}"
 
           echo "old=${OLD}" >> "${GITHUB_OUTPUT}"
           echo "new=${NEW}" >> "${GITHUB_OUTPUT}"
-
           echo "Version bumped: ${OLD} -> ${NEW}"
 
-      # ── 4. Commit the version bump back to main ───────────────────
-      #   "[skip ci]" in the message tells GitHub Actions to ignore
-      #   this commit — preventing the workflow from re-triggering.
+      # ── 4. Commit version bump back to main ───────────────────────
+      #   "[skip ci]" prevents this commit from re-triggering the workflow
       - name: Commit version bump
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
           git add domagent-mcp/package.json
-
           git commit -m "bump version to ${{ steps.version.outputs.new }} [skip ci]"
-
           git push origin main
 
-      # ── 5. Create and push a version tag ──────────────────────────
+      # ── 5. Package Chrome extension as ZIP ───────────────────────
+      - name: Package Chrome extension
+        run: |
+          cd domagent-extension
+          zip -r "../domagent-chrome-${{ steps.version.outputs.new }}.zip" chrome/ \
+            --exclude "chrome/.DS_Store" \
+            --exclude "chrome/__MACOSX"
+          echo "Packaged Chrome extension:"
+          ls -lh "../domagent-chrome-${{ steps.version.outputs.new }}.zip"
+
+      # ── 6. Package Firefox extension as XPI ──────────────────────
+      - name: Package Firefox extension
+        run: |
+          cd domagent-extension
+          zip -r "../domagent-firefox-${{ steps.version.outputs.new }}.xpi" firefox/ \
+            --exclude "firefox/.DS_Store" \
+            --exclude "firefox/__MACOSX"
+          echo "Packaged Firefox extension:"
+          ls -lh "../domagent-firefox-${{ steps.version.outputs.new }}.xpi"
+
+      # ── 7. Package MCP server via npm pack ────────────────────────
+      - name: Package MCP server
+        run: |
+          cd domagent-mcp
+          npm ci --ignore-scripts
+          npm pack
+          mv domagent-bridge-*.tgz "../domagent-mcp-${{ steps.version.outputs.new }}.tgz"
+          echo "Packaged MCP server:"
+          ls -lh "../domagent-mcp-${{ steps.version.outputs.new }}.tgz"
+
+      # ── 8. Compute SHA-256 digests (passed to SLSA provenance job) ─
+      - name: Generate artifact digests
+        id: hash
+        run: |
+          set -euo pipefail
+          files=(
+            "domagent-chrome-${{ steps.version.outputs.new }}.zip"
+            "domagent-firefox-${{ steps.version.outputs.new }}.xpi"
+            "domagent-mcp-${{ steps.version.outputs.new }}.tgz"
+          )
+          echo "Artifact sizes:"
+          ls -lh "${files[@]}"
+          echo "hashes=$(sha256sum "${files[@]}" | base64 -w0)" >> "${GITHUB_OUTPUT}"
+
+      # ── 9. Create git tag ─────────────────────────────────────────
       - name: Create git tag
         run: |
           TAG="v${{ steps.version.outputs.new }}"
@@ -129,39 +170,73 @@ jobs:
           git push origin "${TAG}"
           echo "Tagged: ${TAG}"
 
-      # ── 6. Create the GitHub Release ──────────────────────────────
-      #   The "release: created" event from this step automatically
-      #   triggers the SLSA provenance workflow which builds the
-      #   Chrome ZIP, Firefox XPI, MCP tgz and attaches provenance.
+      # ── 10. Create GitHub Release and upload all artifacts ──────────
+      #   Artifacts are attached HERE — no waiting on a second workflow.
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v${{ steps.version.outputs.new }}"
           name: "DOMAgent v${{ steps.version.outputs.new }}"
           generate_release_notes: true
+          files: |
+            domagent-chrome-${{ steps.version.outputs.new }}.zip
+            domagent-firefox-${{ steps.version.outputs.new }}.xpi
+            domagent-mcp-${{ steps.version.outputs.new }}.tgz
           body: |
             ## DOMAgent v${{ steps.version.outputs.new }}
 
             Released automatically from commit [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) on `main`.
 
-            ### Commit
-            > ${{ github.event.head_commit.message }}
+            **Commit:** ${{ github.event.head_commit.message }}
 
             ---
 
-            ### Artifacts
-            The following artifacts will be attached shortly by the SLSA provenance workflow:
+            ### Downloads
 
             | File | Description |
             |------|-------------|
             | `domagent-chrome-${{ steps.version.outputs.new }}.zip` | Chrome extension — load via `chrome://extensions` |
             | `domagent-firefox-${{ steps.version.outputs.new }}.xpi` | Firefox extension — load via `about:debugging` |
             | `domagent-mcp-${{ steps.version.outputs.new }}.tgz` | MCP server Node.js package |
-            | `multiple.intoto.jsonl` | SLSA Level 3 signed provenance |
+            | `multiple.intoto.jsonl` | SLSA Level 3 signed provenance (attached by provenance job) |
 
-            ### Verify provenance
+            ---
+
+            ### Install the Chrome extension
+            1. Download `domagent-chrome-${{ steps.version.outputs.new }}.zip`
+            2. Unzip it into a folder
+            3. Go to `chrome://extensions` → enable **Developer mode** → **Load unpacked** → select the unzipped folder
+
+            ### Install the Firefox extension
+            1. Download `domagent-firefox-${{ steps.version.outputs.new }}.xpi`
+            2. Go to `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** → select the `.xpi` file
+
+            ### Start the MCP server
+            ```bash
+            npm install -g domagent-bridge  # or extract the .tgz and run npm install && npm start
+            ```
+
+            ---
+
+            ### Verify provenance (SLSA Level 3)
             ```bash
             slsa-verifier verify-artifact domagent-chrome-${{ steps.version.outputs.new }}.zip \
               --provenance-path multiple.intoto.jsonl \
               --source-uri github.com/${{ github.repository }}
             ```
+
+  # ──────────────────────────────────────────────────────────────────
+  # Job 2: Sign SLSA Level 3 provenance and attach to release
+  # Runs after build-and-release completes successfully
+  # ──────────────────────────────────────────────────────────────────
+  provenance:
+    name: Generate SLSA provenance
+    needs: [build-and-release]
+    permissions:
+      actions: read    # read workflow path for provenance
+      id-token: write  # sign provenance with GitHub OIDC token
+      contents: write  # upload provenance file to the release
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.4.0
+    with:
+      base64-subjects: "${{ needs.build-and-release.outputs.digests }}"
+      upload-assets: true
