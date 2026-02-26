@@ -22,35 +22,26 @@
 # DEV TEAM NOTE — Full release pipeline flow
 # ─────────────────────────────────────────────────────────────────────
 #
-#   Developer works on  dev  branch
-#            │
-#            │  git push origin dev  (your daily work — no releases fired)
-#            │
-#            ▼
-#      PR / merge  ──────────►  main  branch
-#                                    │
-#                                    │  push event fires
-#                                    ▼
-#                         auto-release.yml  (this file)
-#                         ──────────────────────────────────────
-#                         1. Read version from package.json
-#                         2. npm version patch  (1.0.0 → 1.0.1)
-#                         3. git commit "[skip ci]" ← loop broken
-#                         4. git push origin main
-#                         5. Pack Chrome ZIP
-#                         6. Pack Firefox XPI
-#                         7. npm pack MCP server tgz
-#                         8. git tag v1.0.1
-#                         9. Create GitHub Release + upload all artifacts
-#                                    │
-#                                    │  digests passed to provenance job
-#                                    ▼
-#               generator-generic-ossf-slsa3-publish.yml
-#               ─────────────────────────────────────────
-#               1. SHA-256 hash all three artifacts
-#               2. SLSA generator signs provenance
-#                  (GitHub OIDC token – non-falsifiable)
-#               3. Upload provenance file to the release
+#   push to main
+#       │
+#       ▼
+#   auto-release.yml  (sequential steps, single job)
+#     1. bump package.json patch version
+#     2. commit "[skip ci]" → push to main
+#     3. pack Chrome ZIP
+#     4. pack Firefox XPI
+#     5. npm pack → domagent-mcp-X.Y.Z.tgz
+#     6. git tag vX.Y.Z
+#     7. Create GitHub Release + upload all 3 files
+#       │
+#       │  "release: created" fires TWO workflows IN PARALLEL
+#       ├──────────────────────────────────────────────────────────┐
+#       ▼                                                          ▼
+#   generator-generic-ossf-slsa3-publish.yml          npm-publish.yml
+#     - SHA-256 all 3 artifacts                          - checkout the release tag
+#     - SLSA signs provenance                            - verify version matches tag
+#     - uploads multiple.intoto.jsonl                    - npm publish domagent
+#         to the release                                     using NPM_TOKEN secret
 #
 # ─────────────────────────────────────────────────────────────────────
 
