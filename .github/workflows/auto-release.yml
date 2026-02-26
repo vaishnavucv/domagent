@@ -144,7 +144,7 @@ jobs:
           cd domagent-mcp
           npm ci --ignore-scripts
           npm pack
-          mv domagent-bridge-*.tgz "../domagent-mcp-${{ steps.version.outputs.new }}.tgz"
+          mv domagent-*.tgz "../domagent-mcp-${{ steps.version.outputs.new }}.tgz"
           echo "Packaged MCP server:"
           ls -lh "../domagent-mcp-${{ steps.version.outputs.new }}.tgz"
 
@@ -202,6 +202,29 @@ jobs:
 
             ---
 
+            ### MCP server — quickest install
+
+            ```bash
+            npx domagent
+            ```
+
+            Or install globally: `npm install -g domagent`
+
+            Add to Claude Desktop or any MCP-compatible agent:
+
+            ```json
+            {
+              "mcpServers": {
+                "domagent": {
+                  "command": "npx",
+                  "args": ["domagent"]
+                }
+              }
+            }
+            ```
+
+            ---
+
             ### Install the Chrome extension
             1. Download `domagent-chrome-${{ steps.version.outputs.new }}.zip`
             2. Unzip it into a folder
@@ -210,11 +233,6 @@ jobs:
             ### Install the Firefox extension
             1. Download `domagent-firefox-${{ steps.version.outputs.new }}.xpi`
             2. Go to `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** → select the `.xpi` file
-
-            ### Start the MCP server
-            ```bash
-            npm install -g domagent-bridge  # or extract the .tgz and run npm install && npm start
-            ```
 
             ---
 
