@@ -103,7 +103,7 @@ jobs:
           ls -lh $files
 
           # Produce base64-encoded sha256 lines (required format for SLSA generator)
-          echo "hashes=$(sha256sum $files | base64 -w0)" >> "${GITHUB_OUTPUT}"
+          echo "digests=$(sha256sum $files | base64 -w0)" >> "${GITHUB_OUTPUT}"
 
       # ── Upload artifacts to the GitHub release ────────────────────
       - name: Upload release artifacts

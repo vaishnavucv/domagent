@@ -151,7 +151,7 @@ jobs:
           )
           echo "Artifact sizes:"
           ls -lh "${files[@]}"
-          echo "hashes=$(sha256sum "${files[@]}" | base64 -w0)" >> "${GITHUB_OUTPUT}"
+          echo "digests=$(sha256sum "${files[@]}" | base64 -w0)" >> "${GITHUB_OUTPUT}"
 
       # ── 9. Create git tag ─────────────────────────────────────────
       - name: Create git tag
