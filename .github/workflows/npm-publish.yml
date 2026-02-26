@@ -1,32 +1,28 @@
-# Publish to npm — fires when a GitHub Release is created
+# Publish to npm — MANUAL RE-PUBLISH FALLBACK
 #
-# Runs IN PARALLEL with generator-generic-ossf-slsa3-publish.yml.
-# Both are triggered by the same "release: created" event emitted
-# by auto-release.yml after every push to main.
+# Automatic publishing is handled as Job 3 inside auto-release.yml.
+# GitHub Actions does NOT fire release:created events from releases
+# created by another workflow using GITHUB_TOKEN, so a standalone
+# workflow triggered on release:created would never run automatically.
 #
-# Pipeline order:
-#   push to main
-#     └─► auto-release.yml         (bumps version, builds artifacts, creates release)
-#           └─► release: created event fires TWO workflows simultaneously:
-#                 ├─► generator-generic-ossf-slsa3-publish.yml  (SLSA provenance)
-#                 └─► npm-publish.yml  (this file — publishes to npm)
+# Use this workflow ONLY for:
+#   - Re-publishing a version if the publish job in auto-release failed
+#   - Publishing to npm manually for a specific tag
+#
+# Trigger: manual only (Actions tab → "Publish to npm" → Run workflow)
 #
 # Required repository secret:
-#   NPM_TOKEN — create at https://www.npmjs.com/settings/<username>/tokens
-#               use an "Automation" token type
-#               add it at: repo Settings → Secrets and variables → Actions → New secret
-#
-# The published package name is "domagent".
-# Users install it with:
-#   npm install -g domagent
-# or run it directly with:
-#   npx domagent
+#   NPM_TOKEN — Automation token from https://www.npmjs.com/settings/<username>/tokens
 
 name: Publish to npm
 
 on:
-  release:
-    types: [created]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish (e.g. v1.0.5)'
+        required: true
+        type: string
 
 jobs:
   npm-publish:
@@ -43,7 +39,7 @@ jobs:
       - name: Checkout release tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ github.event.inputs.tag }}
 
       # ── 2. Set up Node.js with npm registry auth ──────────────────
       - name: Set up Node.js
@@ -56,7 +52,7 @@ jobs:
       - name: Get version from tag
         id: version
         run: |
-          TAG="${{ github.event.release.tag_name }}"
+          TAG="${{ github.event.inputs.tag }}"
           VERSION="${TAG#v}"
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "Publishing version: ${VERSION}"

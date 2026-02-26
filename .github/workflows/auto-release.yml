@@ -25,23 +25,30 @@
 #   push to main
 #       │
 #       ▼
-#   auto-release.yml  (sequential steps, single job)
-#     1. bump package.json patch version
-#     2. commit "[skip ci]" → push to main
-#     3. pack Chrome ZIP
-#     4. pack Firefox XPI
-#     5. npm pack → domagent-mcp-X.Y.Z.tgz
-#     6. git tag vX.Y.Z
-#     7. Create GitHub Release + upload all 3 files
-#       │
-#       │  "release: created" fires TWO workflows IN PARALLEL
-#       ├──────────────────────────────────────────────────────────┐
-#       ▼                                                          ▼
-#   generator-generic-ossf-slsa3-publish.yml          npm-publish.yml
-#     - SHA-256 all 3 artifacts                          - checkout the release tag
-#     - SLSA signs provenance                            - verify version matches tag
-#     - uploads multiple.intoto.jsonl                    - npm publish domagent
-#         to the release                                     using NPM_TOKEN secret
+#   auto-release.yml  (this file — single workflow, 3 jobs)
+#     Job 1: build-and-release
+#       1. bump package.json patch version
+#       2. commit "[skip ci]" → push to main
+#       3. pack Chrome ZIP
+#       4. pack Firefox XPI
+#       5. npm pack → domagent-mcp-X.Y.Z.tgz
+#       6. git tag vX.Y.Z
+#       7. Create GitHub Release + upload all 3 artifact files
+#              │
+#              │  needs: [build-and-release]  — runs IN PARALLEL:
+#              ├──────────────────────────────────────────────
+#              │                                             │
+#              ▼                                             ▼
+#       Job 2: provenance                          Job 3: npm-publish
+#         - SHA-256 all 3 artifacts                  - checkout tag vX.Y.Z
+#         - SLSA signs provenance                    - npm publish domagent
+#         - uploads multiple.intoto.jsonl              using NPM_TOKEN secret
+#           to the release
+#
+# NOTE: npm-publish.yml exists as a MANUAL fallback only.
+# GitHub Actions does not propagate release:created events from
+# GITHUB_TOKEN-created releases to other workflows, so the publish
+# must live here as a direct job.
 #
 # ─────────────────────────────────────────────────────────────────────
 
@@ -236,7 +243,7 @@ jobs:
 
   # ──────────────────────────────────────────────────────────────────
   # Job 2: Sign SLSA Level 3 provenance and attach to release
-  # Runs after build-and-release completes successfully
+  # Runs in parallel with npm-publish after build-and-release
   # ──────────────────────────────────────────────────────────────────
   provenance:
     name: Generate SLSA provenance
@@ -249,3 +256,47 @@ jobs:
     with:
       base64-subjects: "${{ needs.build-and-release.outputs.digests }}"
       upload-assets: true
+
+  # ──────────────────────────────────────────────────────────────────
+  # Job 3: Publish to npm
+  # Runs in parallel with provenance after build-and-release
+  #
+  # NOTE: npm-publish.yml cannot be used here because GitHub Actions
+  # does not fire release:created events from releases created by
+  # another workflow using GITHUB_TOKEN (security restriction).
+  # The publish must happen as a direct job in this workflow.
+  # ──────────────────────────────────────────────────────────────────
+  npm-publish:
+    name: Publish domagent to npm
+    needs: [build-and-release]
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      # Checkout the exact tag created by build-and-release so
+      # package.json already has the correct bumped version
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: "v${{ needs.build-and-release.outputs.version }}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: cd domagent-mcp && npm ci --ignore-scripts
+
+      - name: Publish to npm
+        run: |
+          cd domagent-mcp
+          echo "Publishing domagent@${{ needs.build-and-release.outputs.version }} to npm..."
+          npm publish --access public
+          echo "Published: https://www.npmjs.com/package/domagent"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
