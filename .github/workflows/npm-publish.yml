@@ -28,23 +28,22 @@ jobs:
 
     permissions:
       contents: read
-      id-token: write # required for Trusted Publishing (OIDC)
+      id-token: write # CRITICAL for Trusted Publishing
 
     steps:
       # ── 1. Checkout the exact release tag ─────────────────────────
-      # The tag was created by auto-release.yml on the version-bump commit,
-      # so package.json at this ref already has the correct bumped version.
       - name: Checkout release tag
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag }}
 
-      # ── 2. Set up Node.js with npm registry auth ──────────────────
+      # ── 2. Set up Node.js ─────────────────────────────────────────
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          # NOTE: Do NOT set registry-url here when using OIDC/Trusted Publishing
+
 
       # ── 3. Extract version from release tag ───────────────────────
       - name: Get version from tag

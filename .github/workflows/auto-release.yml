@@ -273,11 +273,10 @@ jobs:
 
     permissions:
       contents: read
-      id-token: write # required for Trusted Publishing (OIDC)
+      id-token: write # CRITICAL for Trusted Publishing
 
     steps:
-      # Checkout the exact tag created by build-and-release so
-      # package.json already has the correct bumped version
+      # Checkout the exact tag created by build-and-release
       - name: Checkout release tag
         uses: actions/checkout@v4
         with:
@@ -287,7 +286,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
+          # NOTE: Do NOT set registry-url here when using OIDC/Trusted Publishing
+
 
       - name: Install dependencies
         run: cd domagent-mcp && npm ci --ignore-scripts
