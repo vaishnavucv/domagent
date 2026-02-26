@@ -1,0 +1,131 @@
+# Auto Release — fires on every push to main
+#
+# What this does:
+#   1. Reads the current version from domagent-mcp/package.json
+#   2. Bumps the patch number  (e.g. 1.0.0 -> 1.0.1)
+#   3. Commits the version bump back to main with "[skip ci]"
+#      so this workflow does NOT re-trigger on its own commit
+#   4. Creates a git tag  (e.g. v1.0.1)
+#   5. Creates a GitHub Release with auto-generated release notes
+#   6. The "release: created" event fires the SLSA provenance workflow
+#      (.github/workflows/generator-generic-ossf-slsa3-publish.yml)
+#      which builds and attaches all three artifacts + provenance
+#
+# Skip condition:
+#   Commits whose message contains "[skip ci]" are ignored.
+#   The version-bump commit made by this workflow always contains
+#   "[skip ci]" so the loop is broken.
+
+name: Auto Release on push to main
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  auto-release:
+    name: Bump version and create release
+    runs-on: ubuntu-latest
+
+    # Do not run on version-bump commits made by this workflow itself
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+
+    permissions:
+      contents: write  # push version bump commit + tag + create release
+
+    steps:
+      # ── 1. Checkout with full history and write access ────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # Use GITHUB_TOKEN so the push in step 3 can trigger
+          # other workflows (tags/releases) correctly
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 2. Set up Node.js for npm version ─────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── 3. Bump patch version in package.json ─────────────────────
+      #   npm version patch --no-git-tag-version
+      #   - increments the patch digit only (1.0.0 → 1.0.1)
+      #   - writes the new version to package.json
+      #   - does NOT create a git tag (we handle that ourselves)
+      - name: Bump patch version
+        id: version
+        run: |
+          cd domagent-mcp
+
+          OLD=$(node -p "require('./package.json').version")
+
+          # npm version patch returns the new version with a leading "v"
+          RAW=$(npm version patch --no-git-tag-version)
+          NEW="${RAW#v}"
+
+          echo "old=${OLD}" >> "${GITHUB_OUTPUT}"
+          echo "new=${NEW}" >> "${GITHUB_OUTPUT}"
+
+          echo "Version bumped: ${OLD} -> ${NEW}"
+
+      # ── 4. Commit the version bump back to main ───────────────────
+      #   "[skip ci]" in the message tells GitHub Actions to ignore
+      #   this commit — preventing the workflow from re-triggering.
+      - name: Commit version bump
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add domagent-mcp/package.json
+
+          git commit -m "bump version to ${{ steps.version.outputs.new }} [skip ci]"
+
+          git push origin main
+
+      # ── 5. Create and push a version tag ──────────────────────────
+      - name: Create git tag
+        run: |
+          TAG="v${{ steps.version.outputs.new }}"
+          git tag "${TAG}"
+          git push origin "${TAG}"
+          echo "Tagged: ${TAG}"
+
+      # ── 6. Create the GitHub Release ──────────────────────────────
+      #   The "release: created" event from this step automatically
+      #   triggers the SLSA provenance workflow which builds the
+      #   Chrome ZIP, Firefox XPI, MCP tgz and attaches provenance.
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ steps.version.outputs.new }}"
+          name: "DOMAgent v${{ steps.version.outputs.new }}"
+          generate_release_notes: true
+          body: |
+            ## DOMAgent v${{ steps.version.outputs.new }}
+
+            Released automatically from commit [`${{ github.sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}) on `main`.
+
+            ### Commit
+            > ${{ github.event.head_commit.message }}
+
+            ---
+
+            ### Artifacts
+            The following artifacts will be attached shortly by the SLSA provenance workflow:
+
+            | File | Description |
+            |------|-------------|
+            | `domagent-chrome-${{ steps.version.outputs.new }}.zip` | Chrome extension — load via `chrome://extensions` |
+            | `domagent-firefox-${{ steps.version.outputs.new }}.xpi` | Firefox extension — load via `about:debugging` |
+            | `domagent-mcp-${{ steps.version.outputs.new }}.tgz` | MCP server Node.js package |
+            | `multiple.intoto.jsonl` | SLSA Level 3 signed provenance |
+
+            ### Verify provenance
+            ```bash
+            slsa-verifier verify-artifact domagent-chrome-${{ steps.version.outputs.new }}.zip \
+              --provenance-path multiple.intoto.jsonl \
+              --source-uri github.com/${{ github.repository }}
+            ```
