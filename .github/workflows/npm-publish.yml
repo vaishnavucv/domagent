@@ -10,9 +10,6 @@
 #   - Publishing to npm manually for a specific tag
 #
 # Trigger: manual only (Actions tab → "Publish to npm" → Run workflow)
-#
-# Required repository secret:
-#   NPM_TOKEN — Automation token from https://www.npmjs.com/settings/<username>/tokens
 
 name: Publish to npm
 
@@ -30,7 +27,8 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read  # only needs to read the repo
+      contents: read
+      id-token: write # required for Trusted Publishing (OIDC)
 
     steps:
       # ── 1. Checkout the exact release tag ─────────────────────────
@@ -77,12 +75,11 @@ jobs:
 
       # ── 6. Publish to npm ─────────────────────────────────────────
       #   --access public  required for scoped packages; harmless for unscoped
-      #   NODE_AUTH_TOKEN  set from the NPM_TOKEN repository secret
+      #   --provenance     generates SLSA provenance for the npm package
       - name: Publish to npm
         run: |
           cd domagent-mcp
-          echo "Publishing domagent@${{ steps.version.outputs.version }} to npm..."
-          npm publish --access public
+          echo "Publishing domagent@${{ steps.version.outputs.version }} to npm via Trusted Publishing..."
+          npm publish --access public --provenance
           echo "Published: https://www.npmjs.com/package/domagent"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+

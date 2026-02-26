@@ -273,6 +273,7 @@ jobs:
 
     permissions:
       contents: read
+      id-token: write # required for Trusted Publishing (OIDC)
 
     steps:
       # Checkout the exact tag created by build-and-release so
@@ -294,9 +295,8 @@ jobs:
       - name: Publish to npm
         run: |
           cd domagent-mcp
-          echo "Publishing domagent@${{ needs.build-and-release.outputs.version }} to npm..."
-          npm publish --access public
+          echo "Publishing domagent@${{ needs.build-and-release.outputs.version }} to npm via Trusted Publishing..."
+          npm publish --access public --provenance
           echo "Published: https://www.npmjs.com/package/domagent"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
 
