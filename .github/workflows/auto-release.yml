@@ -59,6 +59,15 @@ on:
     branches:
       - main
 
+# ── Permissions ─────────────────────────────────────────────────────
+# These are required at the workflow level for:
+#   1. Job 1: pushing code/tags/releases
+#   2. Job 2: reusable workflow internal needs
+#   3. Job 3: OIDC token for Trusted Publishing to npm
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
   # ──────────────────────────────────────────────────────────────────
   # Job 1: Bump version, build artifacts, create release
@@ -70,12 +79,10 @@ jobs:
     # Do not run on version-bump commits made by this workflow itself
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
 
-    permissions:
-      contents: write  # push version bump commit + tag + create release
-
     outputs:
       version: ${{ steps.version.outputs.new }}
       digests: ${{ steps.hash.outputs.digests }}
+
 
     steps:
       # ── 1. Checkout ───────────────────────────────────────────────
@@ -270,10 +277,6 @@ jobs:
     name: Publish domagent to npm
     needs: [build-and-release]
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      id-token: write # CRITICAL for Trusted Publishing
 
     steps:
       # Checkout the exact tag created by build-and-release
