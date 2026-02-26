@@ -1,0 +1,17 @@
+# npm publish exclusions for domagent
+#
+# Only index.js, server.js, and README.md are published (defined in
+# package.json "files"). Everything else is excluded by default.
+# This file makes the exclusions explicit for clarity.
+
+# Dev and CI files
+.github/
+*.yml
+*.yaml
+
+# Lock file (npm regenerates this on install)
+package-lock.json
+
+# macOS artifacts
+.DS_Store
+__MACOSX/

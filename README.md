@@ -4,6 +4,13 @@
 
 The agent connects to the MCP server running on your machine, and the MCP server relays commands to the browser via the extension. Every action (click, type, screenshot, navigate…) happens in your real, already-open browser window.
 
+[![npm version](https://img.shields.io/npm/v/domagent)](https://www.npmjs.com/package/domagent)
+[![npm downloads](https://img.shields.io/npm/dm/domagent)](https://www.npmjs.com/package/domagent)
+
+```bash
+npx domagent
+```
+
 ---
 
 ## Why DOMAgent?
@@ -96,7 +103,22 @@ The server starts a WebSocket on `ws://127.0.0.1:18792/extension` and waits for 
 
 ### 3. Connect your AI Agent
 
-Configure your AI agent to use the MCP server via **stdio** transport:
+Configure your AI agent to use the MCP server via **stdio** transport.
+
+**Recommended — use the npm package (no path needed):**
+
+```json
+{
+  "mcpServers": {
+    "domagent": {
+      "command": "npx",
+      "args": ["domagent"]
+    }
+  }
+}
+```
+
+**Alternative — run from source:**
 
 ```json
 {

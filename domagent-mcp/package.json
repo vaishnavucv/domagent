@@ -1,11 +1,43 @@
 {
-    "name": "domagent-bridge",
+    "name": "domagent",
     "version": "1.0.2",
-    "description": "Bridge server for DOMAgent extension to enable AI browser automation",
+    "description": "MCP server for DOMAgent — let AI agents control your real browser via Chrome or Firefox extension",
     "main": "index.js",
     "type": "module",
+    "bin": {
+        "domagent": "./index.js"
+    },
     "scripts": {
         "start": "node index.js"
+    },
+    "files": [
+        "index.js",
+        "server.js",
+        "README.md"
+    ],
+    "keywords": [
+        "mcp",
+        "model-context-protocol",
+        "browser-automation",
+        "ai",
+        "chrome",
+        "firefox",
+        "dom",
+        "domagent",
+        "cdp",
+        "devtools-protocol"
+    ],
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/vaishnavucv/domagent.git"
+    },
+    "homepage": "https://github.com/vaishnavucv/domagent#readme",
+    "bugs": {
+        "url": "https://github.com/vaishnavucv/domagent/issues"
+    },
+    "engines": {
+        "node": ">=18.0.0"
     },
     "dependencies": {
         "@modelcontextprotocol/sdk": "0.6.0",
