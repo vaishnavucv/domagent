@@ -1,6 +1,6 @@
 {
     "name": "domagent",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "MCP server for DOMAgent — let AI agents control your real browser via Chrome or Firefox extension",
     "main": "index.js",
     "type": "module",
