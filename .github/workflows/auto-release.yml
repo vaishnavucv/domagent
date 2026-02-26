@@ -15,6 +15,42 @@
 #   Commits whose message contains "[skip ci]" are ignored.
 #   The version-bump commit made by this workflow always contains
 #   "[skip ci]" so the loop is broken.
+#
+# ─────────────────────────────────────────────────────────────────────
+# DEV TEAM NOTE — Full release pipeline flow
+# ─────────────────────────────────────────────────────────────────────
+#
+#   Developer works on  dev  branch
+#            │
+#            │  git push origin dev  (your daily work — no releases fired)
+#            │
+#            ▼
+#      PR / merge  ──────────►  main  branch
+#                                    │
+#                                    │  push event fires
+#                                    ▼
+#                         auto-release.yml
+#                         ─────────────────────────────────
+#                         1. Read version from package.json
+#                         2. npm version patch  (1.0.0 → 1.0.1)
+#                         3. git commit "[skip ci]" ← loop broken
+#                         4. git push origin main
+#                         5. git tag v1.0.1
+#                         6. Create GitHub Release
+#                                    │
+#                                    │  "release: created" event fires
+#                                    ▼
+#               generator-generic-ossf-slsa3-publish.yml
+#               ─────────────────────────────────────────
+#               1. Pack Chrome ZIP
+#               2. Pack Firefox XPI
+#               3. npm pack MCP server tgz
+#               4. SHA-256 hash all three
+#               5. SLSA generator signs provenance
+#                  (GitHub OIDC token – non-falsifiable)
+#               6. Upload artifacts + provenance to release
+#
+# ─────────────────────────────────────────────────────────────────────
 
 name: Auto Release on push to main
 
