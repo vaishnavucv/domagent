@@ -1,6 +1,6 @@
-# DOMAgent — Chrome Extension
+# DOMAgent: Chrome Extension
 
-> Let AI agents control your real Chrome browser through the Chrome DevTools Protocol (CDP). No headless browsers. No separate drivers. Your existing tabs, sessions, and cookies — all intact.
+> Let AI agents control your real Chrome browser through the Chrome DevTools Protocol (CDP). No headless browsers. No separate drivers. Your existing tabs, sessions, and cookies are all kept intact.
 
 ---
 
@@ -41,9 +41,9 @@ Chrome Tab  (your real, logged-in browser)
 
 | Headless browser | DOMAgent (real browser) |
 |-----------------|------------------------|
-| No existing session — must log in again | All your cookies and sessions are present |
-| Invisible — can't watch what happens | You see every action as it happens |
-| Slow setup (Puppeteer/Playwright spin-up) | Instant — extension is already loaded |
+| No existing session: must log in again | All your cookies and sessions are present |
+| Invisible: can't watch what happens | You see every action as it happens |
+| Slow setup (Puppeteer/Playwright spin-up) | Instant: extension is already loaded |
 | Separate process, separate profile | Same Chrome profile you use every day |
 
 ---
@@ -52,11 +52,11 @@ Chrome Tab  (your real, logged-in browser)
 
 ```
 chrome/
-├── manifest.json      ← MV3 manifest (debugger + tabs + storage permissions)
-├── background.js      ← Service worker: CDP relay, tab management, WebSocket
-├── content.js         ← Page-side overlay helpers (visual indicators)
-├── options.html       ← Settings UI (host, port, WS path)
-├── options.js         ← Saves/restores settings in chrome.storage.local
+├── manifest.json      : MV3 manifest (debugger, tabs, and storage permissions)
+├── background.js      : Service worker: CDP relay, tab management, and WebSocket
+├── content.js         : Page-side overlay helpers (visual indicators)
+├── options.html       : Settings UI (host, port, WS path)
+├── options.js         : Saves and restores settings in chrome.storage.local
 └── icons/
     ├── icon16.png
     ├── icon32.png
@@ -130,9 +130,9 @@ The DOMAgent icon will appear permanently in the toolbar showing a badge:
 | Badge | Meaning |
 |-------|---------|
 | `ON` (orange) | Debugger attached and active on this tab |
-| `…` (amber) | Connecting to MCP server |
-| `!` (red) | Connection error — MCP server not running |
-| *(empty)* | Extension loaded but not yet attached to this tab |
+| `...` (amber) | Connecting to MCP server |
+| `!` (red) | Connection error: MCP server not running |
+| (empty) | Extension loaded but not yet attached to this tab |
 
 ---
 
@@ -169,11 +169,11 @@ The extension uses a **single dedicated automation tab** to avoid interfering wi
 
 | Event | Behaviour |
 |-------|-----------|
-| First `navigate` call | Creates one new tab; this becomes the automation tab |
-| Later `navigate` calls | Reuses that same tab — navigates it to the new URL instead of opening another |
+| First `navigate` call | Creates one new tab: this becomes the automation tab |
+| Later `navigate` calls | Reuses that same tab: navigates it to the new URL instead of opening another |
 | `use_current_tab` call | Adopts whichever tab you currently have focused (no new tab created) |
-| Tab closed by user | Automation tab reference cleared; next navigate creates a fresh one |
-| Service worker restarted | Tab ID is recovered from `chrome.storage.session` — no duplicate tabs |
+| Tab closed by user | Automation tab reference cleared: next navigate creates a fresh one |
+| Service worker restarted | Tab ID is recovered from `chrome.storage.session`: no duplicate tabs |
 | Your other tabs | Never touched or hijacked |
 
 ---
@@ -256,13 +256,13 @@ All overlays auto-fade and remove themselves after ~4 seconds.
 
 | Problem | Likely cause | Fix |
 |---------|-------------|-----|
-| Extension card shows a red error | Wrong folder selected, or JS parse error | Select the `chrome/` folder; check error message |
+| Extension card shows a red error | Wrong folder selected, or JS parse error | Select the `chrome/` folder: check error message |
 | Badge shows `!` (red) | MCP server not running | Run `npm start` in `domagent-mcp/` |
-| Badge stuck on `…` (amber) | Server running but wrong port/host | Open Options and verify host/port match |
+| Badge stuck on `...` (amber) | Server running but wrong port/host | Open Options and verify host/port match |
 | Commands fail on a tab | Tab not attached | Click the toolbar icon to manually attach |
-| `chrome.debugger` denied error | Another debugger tool is using the tab | Close DevTools on that tab; try again |
+| `chrome.debugger` denied error | Another debugger tool is using the tab | Close DevTools on that tab: try again |
 | Yellow debug banner | Debugger attached | Launch Chrome with `--silent-debugger-extension-api` |
-| After restart, new duplicate tabs | Service worker state lost | Expected on Chrome restart; one new tab will be created |
+| After restart, new duplicate tabs | Service worker state lost | Expected on Chrome restart: one new tab will be created |
 
 ---
 

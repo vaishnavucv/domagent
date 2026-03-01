@@ -22,9 +22,9 @@ Thank you for taking the time to contribute. This document covers how to report 
 ```
 .
 ├── domagent-extension/
-│   ├── chrome/          <- Chrome extension (MV3, chrome.debugger API)
-│   └── firefox/         <- Firefox extension (MV3, content script relay)
-└── domagent-mcp/        <- Node.js MCP server (WebSocket bridge)
+│   ├── chrome/          : Chrome extension (MV3, chrome.debugger API)
+│   └── firefox/         : Firefox extension (MV3, content script relay)
+└── domagent-mcp/        : Node.js MCP server (WebSocket bridge)
 ```
 
 Each component is independent. Changes to `domagent-mcp/` affect both browsers. Changes to `chrome/` or `firefox/` only affect that browser.
@@ -53,8 +53,8 @@ npm start
 
 Then load the extension for the browser you want to work on:
 
-- **Chrome:** `chrome://extensions` → Developer mode → Load unpacked → select `domagent-extension/chrome/`
-- **Firefox:** `about:debugging` → Load Temporary Add-on → select `domagent-extension/firefox/manifest.json`
+- **Chrome:** `chrome://extensions` - Developer mode - Load unpacked - select `domagent-extension/chrome/`
+- **Firefox:** `about:debugging` - Load Temporary Add-on - select `domagent-extension/firefox/manifest.json`
 
 See the browser-specific READMEs for full setup instructions:
 - [Chrome README](domagent-extension/chrome/README.md)
@@ -67,8 +67,8 @@ See the browser-specific READMEs for full setup instructions:
 Before opening an issue, please:
 
 1. Check that the MCP server is running (`npm start` in `domagent-mcp/`)
-2. Check the browser extension console for errors (DevTools → Service Worker for Chrome, `about:debugging` → Inspect for Firefox)
-3. Search existing issues to see if the bug has already been reported
+2. Check the browser extension console for errors. For Chrome, check the Service Worker. For Firefox, check the Inspect console in `about:debugging`.
+3. Search existing issues to see if the bug has already been reported.
 
 ### Opening a bug report
 
@@ -79,8 +79,8 @@ Open a GitHub issue and include:
 - **OS** (macOS, Windows, Linux)
 - **Steps to reproduce** — be as specific as possible
 - **Expected behaviour** — what you expected to happen
-- **Actual behaviour** — what actually happened
-- **Console output or error messages** — paste the full text, not a screenshot
+- **Actual behaviour:** what actually happened
+- **Console output or error messages:** paste the full text, not a screenshot
 - **Extension version** (shown on `chrome://extensions` or `about:addons`)
 
 ---
@@ -206,7 +206,7 @@ There is no automated linter configured yet. Follow the patterns already present
 
 - **Chrome `background.js`** — this is a MV3 service worker; avoid state that does not survive service-worker suspension without being saved to `chrome.storage.session`
 - **Firefox `background.js`** — persistent background script; no service-worker restrictions, but use the `api` shim (`const api = typeof browser !== 'undefined' ? browser : chrome`) for all API calls
-- **`content.js`** — runs in page context; do not assume access to extension APIs; use `window.postMessage` or the background script message channel for anything that needs extension privileges
+- **`content.js`** runs in page context. Do not assume access to extension APIs. Use `window.postMessage` or the background script message channel for anything that needs extension privileges.
 
 ### MCP server (`domagent-mcp/`)
 

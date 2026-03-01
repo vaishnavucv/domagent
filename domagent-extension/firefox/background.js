@@ -6,7 +6,7 @@
  *   2. Commands are forwarded to the active tab's content script
  *   3. content.js executes them in the page context and returns results
  *
- * The MCP bridge (domagent-mcp) speaks the same protocol on both sides —
+ * The MCP bridge (domagent-mcp) speaks the same protocol on both sides,
  * only the tab-side execution mechanism differs from Chrome.
  * ─────────────────────────────────────────────────────────────────── */
 
@@ -21,7 +21,7 @@ const AUTOMATION_TAB_KEY = '__daAutomationTab'
 const BADGE = {
   on: { text: 'ON', color: '#FF5A36' },
   off: { text: '', color: '#000000' },
-  connecting: { text: '…', color: '#F59E0B' },
+  connecting: { text: '...', color: '#F59E0B' },
   error: { text: '!', color: '#B91C1C' },
 }
 
@@ -250,7 +250,7 @@ async function attachTab(tabId, opts = {}) {
           },
         },
       })
-    } catch { /* not yet connected — ignore */ }
+    } catch { /* not yet connected, ignore */ }
   }
 
   setBadge(tabId, 'on')
@@ -281,7 +281,7 @@ async function detachTab(tabId, reason) {
   }
 
   setBadge(tabId, 'off')
-  void api.action.setTitle({ tabId, title: 'DOMAgent (ON by default — click to disable for this tab)' }).catch(() => { })
+  void api.action.setTitle({ tabId, title: 'DOMAgent (ON by default: click to disable for this tab)' }).catch(() => { })
 }
 
 /* ─── Auto attach ────────────────────────────────────────────────── */
@@ -473,7 +473,7 @@ async function handleCommand(msg) {
     return await api.storage.local.get(defaults)
   }
 
-  /* ── Tab-targeted commands — relay via content script ── */
+  /* ── Tab-targeted commands: relay via content script ── */
 
   if (!tabId) throw new Error(`No attached tab for method: ${method}`)
 

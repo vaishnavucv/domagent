@@ -1,6 +1,6 @@
-# DOMAgent — Firefox Extension
+# DOMAgent: Firefox Extension
 
-> Let AI agents control your real Firefox browser through a content-script relay. No headless browsers. No separate drivers. Your existing tabs, sessions, and cookies — all intact.
+> Let AI agents control your real Firefox browser through a content-script relay. No headless browsers. No separate drivers. Your existing tabs, sessions, and cookies are all kept intact.
 
 ---
 
@@ -22,7 +22,7 @@ AI Agent
 MCP Server  (domagent-mcp/index.js + server.js)
   │  WebSocket  ws://127.0.0.1:18792/extension
   ▼
-Firefox Extension  (background.js — persistent background script)
+Firefox Extension  (background.js: persistent background script)
   │  browser.tabs.sendMessage()
   ▼
 Content Script  (content.js — injected into every page)
@@ -49,9 +49,9 @@ Firefox Tab  (your real, logged-in browser)
 
 | Headless browser | DOMAgent (real browser) |
 |-----------------|------------------------|
-| No existing session — must log in again | All your cookies and sessions are present |
-| Invisible — can't watch what happens | You see every action as it happens |
-| Slow setup (Playwright/Puppeteer spin-up) | Instant — extension is already loaded |
+| No existing session: must log in again | All your cookies and sessions are present |
+| Invisible: can't watch what happens | You see every action as it happens |
+| Slow setup (Playwright/Puppeteer spin-up) | Instant: extension is already loaded |
 | Separate process, separate profile | Same Firefox profile you use every day |
 | Shows "automated software" banner in CDP tools | No debug banner at all in Firefox |
 
@@ -61,11 +61,11 @@ Firefox Tab  (your real, logged-in browser)
 
 ```
 firefox/
-├── manifest.json      ← MV3 manifest (tabs + storage + content_scripts)
-├── background.js      ← Persistent background script: WS relay, tab management
-├── content.js         ← Content script injected into all pages: executes commands
-├── options.html       ← Settings UI (host, port, WS path)
-├── options.js         ← Saves/restores settings in browser.storage.local
+├── manifest.json      : MV3 manifest (tabs, storage, and content_scripts)
+├── background.js      : Persistent background script: WS relay, and tab management
+├── content.js         : Content script injected into all pages: executes commands
+├── options.html       : Settings UI (host, port, WS path)
+├── options.js         : Saves and restores settings in browser.storage.local
 └── icons/
     ├── icon16.png
     ├── icon32.png
@@ -116,7 +116,7 @@ In the Firefox address bar, go to:
 about:debugging#/runtime/this-firefox
 ```
 
-Or: **☰ (hamburger menu)** → **More tools** → **Remote Debugging** → **This Firefox**
+Or: **☰ (hamburger menu)** - **More tools** - **Remote Debugging** - **This Firefox**
 
 ---
 
@@ -159,9 +159,9 @@ The DOMAgent icon appears in the Firefox toolbar. Its badge shows:
 | Badge | Meaning |
 |-------|---------|
 | `ON` (orange) | Extension active and attached to this tab |
-| `…` (amber) | Connecting to MCP server |
-| `!` (red) | Connection error — MCP server not running |
-| *(empty)* | Not yet attached to this tab |
+| `...` (amber) | Connecting to MCP server |
+| `!` (red) | Connection error: MCP server not running |
+| (empty) | Not yet attached to this tab |
 
 ---
 
@@ -229,8 +229,8 @@ zip -r domagent-firefox.xpi \
 
 In Firefox Developer Edition or Nightly:
 
-1. Open **☰** → **Add-ons and Themes** (or press `Ctrl+Shift+A` / `⌘+Shift+A`)
-2. Click the **gear icon ⚙️** → **"Install Add-on From File…"**
+1. Open **☰** - **Add-ons and Themes** (or press `Ctrl+Shift+A` / `⌘+Shift+A`)
+2. Click the **gear icon ⚙️** - **"Install Add-on From File…"**
 3. Select the `domagent-firefox.xpi` you just created
 4. Click **"Add"** in the confirmation popup
 
@@ -243,11 +243,11 @@ DOMAgent is now **permanently installed** and persists across restarts.
 Defaults work without changes when the MCP server runs on its default port. To customize:
 
 1. **Right-click** the DOMAgent toolbar icon
-2. Select **"Manage Extension"** → **"Preferences"** tab
+2. Select **"Manage Extension"** then the **"Preferences"** tab
 
-   — or —
+   - or -
 
-   Go to `about:addons` → click **DOMAgent** → **Preferences** tab
+   Go to `about:addons`, click **DOMAgent**, then the **"Preferences"** tab
 
 3. Adjust:
 
@@ -267,13 +267,13 @@ Same single-automation-tab design as the Chrome extension:
 
 | Event | Behaviour |
 |-------|-----------|
-| First `navigate` call | Creates one new tab; this becomes the automation tab |
-| Later `navigate` calls | Reuses that same tab — navigates it to the new URL |
+| First `navigate` call | Creates one new tab: this becomes the automation tab |
+| Later `navigate` calls | Reuses that same tab: navigates it to the new URL |
 | `use_current_tab` call | Adopts whichever tab is currently focused (no new tab) |
-| Tab closed by user | Automation tab reference cleared; next navigate creates a fresh one |
+| Tab closed by user | Automation tab reference cleared: next navigate creates a fresh one |
 | Your other tabs | Never touched or hijacked |
-| Firefox restart (temporary install) | Extension removed; must reload from `about:debugging` |
-| Firefox restart (permanent install) | Extension persists; automation tab restored from `browser.storage.session` |
+| Firefox restart (temporary install) | Extension removed: must reload from `about:debugging` |
+| Firefox restart (permanent install) | Extension persists: automation tab restored from `browser.storage.session` |
 
 ---
 
@@ -312,7 +312,7 @@ Unlike Chrome (which shows a yellow bar when the debugger API is active), **Fire
 **Permanent install:**
 1. Go to `about:addons`
 2. Find **DOMAgent**
-3. Click **⋯** → **"Remove"** → Confirm
+3. Click **...** then **"Remove"** and confirm.
 
 ---
 

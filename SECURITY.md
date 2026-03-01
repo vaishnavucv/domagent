@@ -12,8 +12,8 @@
 
 DOMAgent consists of two components. Security reports are accepted for both:
 
-- **Browser extension** (`domagent-extension/chrome/` and `domagent-extension/firefox/`) — the extension that runs inside your browser
-- **MCP server** (`domagent-mcp/`) — the local Node.js server that bridges AI agents to the browser
+- **Browser extension** (`domagent-extension/chrome/` and `domagent-extension/firefox/`): the extension that runs inside your browser
+- **MCP server** (`domagent-mcp/`): the local Node.js server that bridges AI agents to the browser
 
 ---
 
@@ -23,10 +23,10 @@ Understanding DOMAgent's threat model helps you make an informed report:
 
 ### By design (not vulnerabilities)
 
-- **The MCP server binds only to `127.0.0.1`** — it is a local-only server, not exposed to the network
-- **The extension communicates only with `127.0.0.1:18792`** — no external network calls are made
-- **Full browser access is intentional** — the extension attaches the debugger to browser tabs; this is the core feature and requires an explicit user action (loading the extension)
-- **Arbitrary JavaScript execution (`evaluate_script`) is intentional** — this is an MCP tool exposed to AI agents; the user must configure and trust the agent
+- **The MCP server binds only to `127.0.0.1`**: it is a local-only server, not exposed to the network
+- **The extension communicates only with `127.0.0.1:18792`**: no external network calls are made
+- **Full browser access is intentional**: the extension attaches the debugger to browser tabs; this is the core feature and requires an explicit user action (loading the extension)
+- **Arbitrary JavaScript execution (`evaluate_script`) is intentional**: this is an MCP tool exposed to AI agents; the user must configure and trust the agent
 
 ### What we do consider vulnerabilities
 
@@ -100,8 +100,8 @@ The following are not considered security vulnerabilities for this project:
 - Issues that require the attacker to have already installed a malicious extension in the same browser
 - Issues that require physical access to the machine
 - Self-XSS (a user injecting JavaScript into their own browser via the `evaluate_script` tool is the intended use)
-- Vulnerabilities in third-party dependencies — please report those upstream; we will update our dependencies in response
-- Missing security headers on the local HTTP server (`127.0.0.1`) — it is local-only by design
+- Vulnerabilities in third-party dependencies: please report those upstream. We will update our dependencies in response.
+- Missing security headers on the local HTTP server (`127.0.0.1`): it is local-only by design.
 
 ---
 

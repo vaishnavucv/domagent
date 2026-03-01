@@ -10,8 +10,8 @@ Every push to the `main` branch (that isn't a continuous integration skip) trigg
 
 | Artifact | Description |
 |----------|-------------|
-| `domagent-chrome-<version>.zip` | Chrome extension archive — load via `chrome://extensions` |
-| `domagent-firefox-<version>.xpi` | Firefox extension archive — load via `about:debugging` |
+| `domagent-chrome-<version>.zip` | Chrome extension archive: load via `chrome://extensions` |
+| `domagent-firefox-<version>.xpi` | Firefox extension archive: load via `about:debugging` |
 | `domagent-mcp-<version>.tgz` | MCP server Node.js package |
 | `domagent` (npm) | The package published to the **[npm registry](https://www.npmjs.com/package/domagent)** |
 | `multiple.intoto.jsonl` | Signed **SLSA Level 3 provenance** verifying all files |
@@ -69,7 +69,7 @@ In the rare event that the automatic publish to npm fails (e.g., due to a regist
 1. Go to the **Actions** tab in GitHub.
 2. Select the **"Publish to npm"** workflow on the left.
 3. Click **"Run workflow"**.
-4. Enter the **tag name** (e.g., `v1.0.11`) and run.
+4. Enter the **tag name** (example: `v1.0.11`) and run.
 
 This manual workflow also generates SLSA provenance and uses OIDC Trusted Publishing.
 

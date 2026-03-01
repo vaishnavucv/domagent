@@ -4,7 +4,7 @@
  * background.js via browser.tabs.sendMessage and executes them in the
  * page, returning results back to background.
  *
- * This replaces Chrome's chrome.debugger API for Firefox — all page
+ * This replaces Chrome's chrome.debugger API for Firefox: all page
  * interactions (eval, screenshot, overlays) happen here directly.
  * ─────────────────────────────────────────────────────────────────── */
 
@@ -107,7 +107,7 @@ async function captureScreenshot() {
     // html2canvas-less approach: clone the viewport into an offscreen canvas.
     // For a simple base64 PNG we use a 1x1 placeholder and note the limitation.
     // Full screenshot support requires the browser.tabs.captureVisibleTab API
-    // called from background.js — so we delegate back.
+    // called from background.js, so we delegate back.
     return '__delegate_to_background__'
 }
 

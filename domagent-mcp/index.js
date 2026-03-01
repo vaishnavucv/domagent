@@ -166,7 +166,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
             case "use_current_tab": {
                 const info = await bridgeServer.useCurrentTab();
-                result = `Using active tab — URL: ${info.url || "unknown"}, Title: ${info.title || "unknown"}`;
+                result = `Using active tab: URL: ${info.url || "unknown"}, Title: ${info.title || "unknown"}`;
                 break;
             }
 

@@ -13,7 +13,7 @@ const AUTOMATION_TAB_KEY = '__daAutomationTab'
 const BADGE = {
   on: { text: 'ON', color: '#FF5A36' },
   off: { text: '', color: '#000000' },
-  connecting: { text: '…', color: '#F59E0B' },
+  connecting: { text: '...', color: '#F59E0B' },
   error: { text: '!', color: '#B91C1C' },
 }
 
@@ -306,7 +306,7 @@ async function attachTab(tabId, opts = {}) {
   try {
     await chrome.debugger.attach(debuggee, '1.3')
   } catch (err) {
-    // If it's already attached, that's fine — just proceed to get target info
+    // If it's already attached, that's fine, so just proceed to get target info
     const msg = String(err?.message || err || '')
     if (!msg.includes('already') && !msg.includes('Another debugger')) {
       throw err // genuinely unexpected error
@@ -386,7 +386,7 @@ async function detachTab(tabId, reason) {
   setBadge(tabId, 'off')
   void chrome.action.setTitle({
     tabId,
-    title: 'DOMAgent (ON by default — click to disable for this tab)',
+    title: 'DOMAgent (ON by default: click to disable for this tab)',
   }).catch(() => { })
 }
 

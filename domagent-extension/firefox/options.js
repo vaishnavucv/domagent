@@ -1,4 +1,4 @@
-/* ── DOMAgent — Options Page ────────────────────────────────────── */
+/* ── DOMAgent: Options Page ────────────────────────────────────── */
 
 const DEFAULTS = { host: '127.0.0.1', port: 18792, path: '/extension' };
 
@@ -169,7 +169,7 @@ async function checkConnection() {
   const h = els.host.value || DEFAULTS.host;
   const p = els.port.value || DEFAULTS.port;
 
-  setStatus('checking', 'Checking connection…', `Reaching ${h}:${p}`);
+  setStatus('checking', 'Checking connection...', `Reaching ${h}:${p}`);
 
   try {
     const controller = new AbortController();
@@ -187,7 +187,7 @@ async function checkConnection() {
       setStatus('disconnected', 'Connection failed', `Server returned ${res.status}`);
     }
   } catch (err) {
-    setStatus('disconnected', 'Bridge unreachable', `Cannot reach ${h}:${p} — is the MCP server running?`);
+    setStatus('disconnected', 'Bridge unreachable', `Cannot reach ${h}:${p}: is the MCP server running?`);
   }
 
   clearTimeout(pollTimer);
