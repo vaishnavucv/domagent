@@ -29,13 +29,13 @@ npx domagent
 ```
 ┌──────────────────┐  WebSocket   ┌──────────────────┐   stdio    ┌──────────────┐
 │  Browser         │◄────────────►│   MCP Server      │◄──────────►│  AI Agent    │
-│  Extension       │  CDP relay   │  (server.js)      │   MCP      │ (Claude,     │
-│  background.js   │              │  + index.js       │            │  Ollama, …)  │
+│  Extension       │  (JSON-RPC)  │  (index.js        │   MCP      │ (Claude,     │
+│  (background.js) │              │  + server.js)     │            │  Ollama, …)  │
 └──────────────────┘              └──────────────────┘            └──────────────┘
 ```
 
 ```
-chrome-extension/
+.
 ├── domagent-extension/
 │   ├── chrome/                  ← Chrome extension
 │   │   ├── background.js        ← Service worker (CDP via debugger API)
@@ -49,8 +49,8 @@ chrome-extension/
 │       ├── options.html / options.js
 │       └── icons/
 └── domagent-mcp/                ← Node.js MCP server (runs locally)
-    ├── index.js
-    ├── server.js
+    ├── index.js                 ← MCP server entry point
+    ├── server.js                ← WebSocket bridge implementation
     └── package.json
 ```
 

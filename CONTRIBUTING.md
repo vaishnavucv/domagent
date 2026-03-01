@@ -20,7 +20,7 @@ Thank you for taking the time to contribute. This document covers how to report 
 ## Project Structure
 
 ```
-chrome-extension/
+.
 ├── domagent-extension/
 │   ├── chrome/          <- Chrome extension (MV3, chrome.debugger API)
 │   └── firefox/         <- Firefox extension (MV3, content script relay)

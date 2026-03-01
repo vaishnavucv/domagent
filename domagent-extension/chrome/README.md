@@ -97,7 +97,7 @@ Click **"Load unpacked"**.
 In the file picker that opens, navigate to and **select this exact folder**:
 
 ```
-/path/to/chrome-extension/domagent-extension/chrome/
+/path/to/domagent/domagent-extension/chrome/
 ```
 
 > ⚠️ Select the `chrome/` folder itself — not `domagent-extension/`, not `manifest.json`. Chrome reads `manifest.json` from inside the folder you select.

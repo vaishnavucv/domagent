@@ -127,7 +127,7 @@ Click **"Load Temporary Add-on…"**
 In the file picker, navigate to:
 
 ```
-/path/to/chrome-extension/domagent-extension/firefox/
+/path/to/domagent/domagent-extension/firefox/
 ```
 
 Select the **`manifest.json`** file inside the `firefox/` folder.
@@ -212,7 +212,7 @@ Double-click the entry to set it to **`false`**.
 An XPI file is just a ZIP archive with the `.xpi` extension. Run this in your terminal:
 
 ```bash
-cd /path/to/chrome-extension/domagent-extension/firefox/
+cd /path/to/domagent/domagent-extension/firefox/
 
 zip -r domagent-firefox.xpi \
   manifest.json \

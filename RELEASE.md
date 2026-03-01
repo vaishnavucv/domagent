@@ -1,206 +1,104 @@
 # Release Process
 
-This document describes how to cut a versioned release of DOMAgent and what happens automatically as a result.
+This document describes the automated release pipeline for DOMAgent.
 
 ---
 
 ## What Gets Released
 
-Each release produces three artifacts:
+Every push to the `main` branch (that isn't a continuous integration skip) triggers a fully automated release. Each release produces:
 
 | Artifact | Description |
 |----------|-------------|
 | `domagent-chrome-<version>.zip` | Chrome extension archive — load via `chrome://extensions` |
 | `domagent-firefox-<version>.xpi` | Firefox extension archive — load via `about:debugging` |
 | `domagent-mcp-<version>.tgz` | MCP server Node.js package |
-
-A signed **SLSA Level 3 provenance file** (`multiple.intoto.jsonl`) is also attached to every release. It cryptographically links each artifact to the exact source commit and build workflow that produced it.
+| `domagent` (npm) | The package published to the **[npm registry](https://www.npmjs.com/package/domagent)** |
+| `multiple.intoto.jsonl` | Signed **SLSA Level 3 provenance** verifying all files |
 
 ---
 
-## Automated Pipeline
+## Automated Pipeline (`auto-release.yml`)
+
+The entire release process is handled in a single GitHub Actions workflow:
 
 ```
-Developer pushes a git tag  (v0.2.0)
+Developer merges PR to 'main'
            │
            ▼
-  release.yml workflow runs
-  - Validates tag matches package.json version
-  - Creates GitHub release  ──────────────────────────────────┐
-                                                              │  "release created" event
-                                                              ▼
-                                          generator-generic-ossf-slsa3-publish.yml runs
-                                          - Packages Chrome ZIP
-                                          - Packages Firefox XPI
-                                          - Packages MCP server tgz
-                                          - SHA-256 hashes all three
-                                          - SLSA generator signs provenance
-                                            using GitHub OIDC token (non-falsifiable)
-                                          - Uploads artifacts + provenance to release
+  auto-release.yml workflow runs
+  1. Bump version (patch) in domagent-mcp/package.json
+  2. Commit and push bump back to 'main' [skip ci]
+  3. Build artifacts (ZIP, XPI, TGZ)
+  4. Create GitHub Release + Git Tag
+  5. Sign artifacts (SLSA Level 3) using GitHub OIDC token
+  6. Publish to npm (with OIDC Trusted Publisher provenance)
+  7. Attach all artifacts + SLSA provenance to the GitHub release
 ```
 
 ---
 
-## Pre-Release Checklist
+## SLSA Level 3 Provenance
 
-Before tagging a release, go through this checklist:
+DOMAgent uses the **[OSSF SLSA GitHub Generator](https://github.com/slsa-framework/slsa-github-generator)** to provide non-falsifiable provenance for every release.
 
-- [ ] All tests pass (manual test checklist in [CONTRIBUTING.md](CONTRIBUTING.md))
-- [ ] Extension loads without errors in Chrome (latest stable)
-- [ ] Extension loads without errors in Firefox 109+
-- [ ] MCP server starts without errors: `cd domagent-mcp && npm start`
-- [ ] End-to-end: at least `navigate`, `click`, `get_screenshot` work correctly
-- [ ] **`domagent-mcp/package.json` version is updated** to match the new tag
-- [ ] `CHANGELOG.md` is updated (if you maintain one)
+This proves that:
+1. The artifacts were built in a trusted, ephemeral GitHub Actions environment.
+2. They reflect the exact source code in the `vaishnavucv/domagent` repository.
+3. No human (including the maintainers) touched the artifacts between the build and the release.
 
 ---
 
-## How to Cut a Release
+## Verifying a Release (for Users)
 
-### Step 1 — Update the version in package.json
-
-```bash
-# Edit domagent-mcp/package.json and set "version" to the new version
-# Example: "version": "0.2.0"
-```
-
-Commit the version bump:
+You can verify any artifact using the [slsa-verifier](https://github.com/slsa-framework/slsa-verifier) tool:
 
 ```bash
-git add domagent-mcp/package.json
-git commit -m "update version to 0.2.0"
-git push origin main
-```
-
-### Step 2 — Tag the release
-
-The tag must match the format `v<major>.<minor>.<patch>` exactly.
-
-```bash
-git tag v0.2.0
-git push origin v0.2.0
-```
-
-> Pushing the tag triggers the `release.yml` workflow automatically.
-
-### Step 3 — Monitor the workflows
-
-Go to the **Actions** tab on GitHub and watch:
-
-1. **Release** workflow — validates version and creates the GitHub release
-2. **SLSA generic generator** workflow — builds artifacts, signs provenance, uploads to release
-
-Both must complete with a green checkmark. If either fails, see [Troubleshooting](#troubleshooting) below.
-
-### Step 4 — Verify the release
-
-On the **Releases** page, confirm the release has:
-
-- `domagent-chrome-<version>.zip`
-- `domagent-firefox-<version>.xpi`
-- `domagent-mcp-<version>.tgz`
-- `multiple.intoto.jsonl` (the SLSA provenance file)
-
----
-
-## Verifying Provenance (for Users)
-
-Users who want to verify that a release artifact was produced from the official source and build pipeline can use the [slsa-verifier](https://github.com/slsa-framework/slsa-verifier) tool.
-
-### Install the verifier
-
-```bash
-go install github.com/slsa-framework/slsa-verifier/v2/cli/slsa-verifier@latest
-```
-
-Or download a pre-built binary from the [slsa-verifier releases page](https://github.com/slsa-framework/slsa-verifier/releases).
-
-### Verify an artifact
-
-```bash
-# Download the artifact and provenance from the GitHub release, then:
-slsa-verifier verify-artifact domagent-chrome-0.2.0.zip \
-  --provenance-path multiple.intoto.jsonl \
-  --source-uri github.com/vaishnavucv/domagent
-
-slsa-verifier verify-artifact domagent-firefox-0.2.0.xpi \
-  --provenance-path multiple.intoto.jsonl \
-  --source-uri github.com/vaishnavucv/domagent
-
-slsa-verifier verify-artifact domagent-mcp-0.2.0.tgz \
+# Example: Verify the Chrome extension artifact
+slsa-verifier verify-artifact domagent-chrome-1.0.11.zip \
   --provenance-path multiple.intoto.jsonl \
   --source-uri github.com/vaishnavucv/domagent
 ```
 
-A successful verification prints:
+---
 
-```
-Verified build using builder "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v1.4.0" at commit <SHA>
-PASSED: SLSA verification passed
-```
+## Manual Re-publish Fallback
 
-This confirms:
-- The artifact was built from the `vaishnavucv/domagent` repository
-- The build ran on GitHub Actions (not a developer's local machine)
-- The exact source commit is recorded and tamper-evident
-- The provenance was signed with GitHub's OIDC token (not a long-lived secret)
+In the rare event that the automatic publish to npm fails (e.g., due to a registry timeout), a manual fallback workflow is available:
+
+1. Go to the **Actions** tab in GitHub.
+2. Select the **"Publish to npm"** workflow on the left.
+3. Click **"Run workflow"**.
+4. Enter the **tag name** (e.g., `v1.0.11`) and run.
+
+This manual workflow also generates SLSA provenance and uses OIDC Trusted Publishing.
 
 ---
 
-## Pre-Release / Beta Tags
+## Pre-Push Checklist (for Contributors)
 
-To cut a pre-release, append a hyphen suffix to the tag:
+Since releases happen on every push to `main`, ensure the following before merging/pushing:
 
-```bash
-git tag v0.2.0-beta.1
-git push origin v0.2.0-beta.1
-```
-
-The `release.yml` workflow automatically marks releases with a hyphen in the tag name as **pre-release** on GitHub. The SLSA workflow still runs and attaches provenance.
+- [ ] Extension loads without errors in Chrome and Firefox.
+- [ ] MCP server starts: `cd domagent-mcp && npm install && node index.js`.
+- [ ] Basic tools (`navigate`, `click`, `get_screenshot`) are verified working locally.
+- [ ] Documentation (`README.md`, etc.) is up to date with code changes.
 
 ---
 
-## Troubleshooting
+## Major/Minor Version Bumps
 
-### "version mismatch" error in Release workflow
+By default, the automated pipeline performs **patch** bumps (`1.0.x`). For **major** or **minor** bumps:
 
-The git tag version does not match `domagent-mcp/package.json`. Update `package.json` first, push to `main`, then re-create the tag:
-
-```bash
-git tag -d v0.2.0          # delete local tag
-git push --delete origin v0.2.0  # delete remote tag
-# fix package.json, commit, push
-git tag v0.2.0
-git push origin v0.2.0
-```
-
-### SLSA workflow fails at provenance step
-
-This is most often a permissions issue. Confirm the repository has:
-
-- **Settings → Actions → General → Workflow permissions** set to **"Read and write permissions"**
-- **Settings → Actions → General → Allow GitHub Actions to create and approve pull requests** — not required but good practice
-
-### Artifact upload fails
-
-If the Release workflow created the release but the artifact upload in the SLSA workflow fails, you can re-run just the SLSA workflow from the **Actions** tab without re-tagging.
+1. Manually update the version in `domagent-mcp/package.json`.
+2. Commit with `[skip ci]` in the message to prevent the auto-release from triggering again.
+3. Push to `main`.
+4. Then push a tag (e.g., `v1.1.0`) manually if you want to trigger the release immediately, or just let the next push to `main` handle it.
 
 ---
 
-## SLSA Level 3 Compliance Notes
+## Permissions and Security
 
-This project meets SLSA Level 3 via the `slsa-framework/slsa-github-generator`:
-
-| SLSA requirement | How it is met |
-|-----------------|---------------|
-| Hosted build platform | GitHub Actions (ubuntu-latest ephemeral runner) |
-| Isolated build | Fresh runner per workflow run, no persistent state |
-| Scripted build | All build steps defined in version-controlled `.github/workflows/` |
-| Non-falsifiable provenance | Signed with GitHub OIDC token (short-lived, bound to workflow run) |
-| Authenticated provenance | `id-token: write` permission used only in the provenance job |
-| Complete provenance | Source URI, commit SHA, workflow ref, build trigger all recorded |
-
-For full SLSA L3 compliance, also ensure:
-
-- Branch protection on `main` is enabled (require PR reviews, no direct push)
-- All workflow action references are pinned to commit SHAs (not floating version tags) in production
+- **GitHub Release:** Uses `GITHUB_TOKEN` with `contents: write`.
+- **npm Publish:** Uses **OIDC Trusted Publishing**. No long-lived npm secrets are needed; GitHub and npm exchange short-lived tokens.
+- **Provenance:** Uses `id-token: write` to sign the SLSA statement.
